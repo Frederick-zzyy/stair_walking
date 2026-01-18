@@ -95,7 +95,7 @@ angle_dir = "Joint Angles"
 moment_dir = "Moment"
 
 # I add this function because I work this file in both windows and mac
-# Better to keep this for safety
+# This leads to useless file that needs to be cleaned up
 tests = sorted({
     f.lower().split("_moment")[0]
     for f in os.listdir(moment_dir)
@@ -208,8 +208,14 @@ clean_curves = curves[good]
 
 print(f"Clean: {len(clean_curves)} / {len(curves)} (removed {len(curves)-len(clean_curves)})")
 
-#   Plotting
-plt.figure(figsize=(12,6))
+
+# Plotting
+# There are three figure, you can delete the regression part
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import Ridge
 
 phi_u = np.linspace(0, 1, clean_curves.shape[1])
 
@@ -220,21 +226,47 @@ mask = np.isfinite(y)
 X = X[mask]
 y = y[mask]
 
-deg = 20
+deg = 30
 model = make_pipeline(PolynomialFeatures(deg, include_bias=False), Ridge(alpha=1e-3))
 model.fit(X, y)
 
 phi_fit = np.linspace(0, 1, 200).reshape(-1, 1)
 tau_fit = model.predict(phi_fit)
 
-plt.figure(figsize=(12,6))
-plt.plot(phi_fit[:,0], tau_fit, linewidth=3)
-plt.title(f"Regression Torque Map: tau = f(phi), deg={deg}")
+# 1) Overlay data only
+plt.figure(figsize=(12, 6))
+for c in clean_curves:
+    plt.plot(phi_u, c, alpha=0.15)
+plt.title(f"Overlay Data (clean cycles = {clean_curves.shape[0]})")
 plt.xlabel("Phase (0–1)")
 plt.ylabel("Hip Torque (Nm)")
 plt.grid(True)
 plt.show()
 
+# 2) Regression only
+plt.figure(figsize=(12, 6))
+plt.plot(phi_fit[:, 0], tau_fit, linewidth=3)
+plt.title(f"Regression: tau = f(phi), deg={deg}")
+plt.xlabel("Phase (0–1)")
+plt.ylabel("Hip Torque (Nm)")
+plt.grid(True)
+plt.show()
+
+
+# 3) Overlay + Regression
+plt.figure(figsize=(12, 6))
+for c in clean_curves:
+    plt.plot(phi_u, c, alpha=0.12)
+plt.plot(phi_fit[:, 0], tau_fit, linewidth=3)
+plt.title(f"Overlay + Regression (deg={deg})")
+plt.xlabel("Phase (0–1)")
+plt.ylabel("Hip Torque (Nm)")
+plt.grid(True)
+plt.show()
+
+print("Polynomial coefficients (highest order last):")
+print(model.named_steps["ridge"].coef_)
+print("Intercept:", model.named_steps["ridge"].intercept_)
 print("Polynomial coefficients (highest order last):")
 print(model.named_steps["ridge"].coef_)
 print("Intercept:", model.named_steps["ridge"].intercept_)
