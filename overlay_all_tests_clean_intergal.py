@@ -95,7 +95,7 @@ angle_dir = "Joint Angles"
 moment_dir = "Moment"
 
 # I add this function because I work this file in both windows and mac
-# This leads to useless file that needs to be cleaned up
+# Better to keep this for safety
 tests = sorted({
     f.lower().split("_moment")[0]
     for f in os.listdir(moment_dir)
